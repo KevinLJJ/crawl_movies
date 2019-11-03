@@ -33,7 +33,10 @@ class DyttCrawlSpider(scrapy.Spider):
         :return:
         """
         items = CrawlMoviesItem()
-        items['movie_id'] = '-'.join(response.url[:-5].split('/')[-2:])
+        try:
+            items['movie_id'] = '-'.join(response.url[:-5].split('/')[-2:])
+        except Exception as e:
+            print(e)
         title = re.search(r'《(.*?)》', str(response.xpath('//title/text()')))
         items['name'] = self.reg_match(title)
         content = response.xpath('//div[@class="co_content8"]').extract()[0]
@@ -49,16 +52,19 @@ class DyttCrawlSpider(scrapy.Spider):
             items['source_date'] = self.reg_match(re.search(r'◎产　　地　(.*?) <br>', content))
             items['score'] = self.reg_match(re.search(r'◎豆瓣评分　(.*?) <br>', content))
             items['resolution'] = self.reg_match(re.search(r'◎视频尺寸　(.*?) <br>', content))
-            items['director'] = self.reg_match(re.search(r'◎导　　演　(.*?) <br>', content))
-            items['screenwriter'] = self.reg_match(re.search(r'◎编　　剧　(.*?) <br>', content))
-            items['main_actor'] = self.reg_match(re.search(r'◎主　　演　(.*?) <br>', content))
+            items['director'] = self.reg_match(re.search(r'◎导　　演　(.*?) <br>◎', content))
+            items['screenwriter'] = self.reg_match(re.search(r'◎编　　剧　(.*?) <br>◎', content))
+            items['main_actor'] = self.reg_match(re.search(r'◎主　　演　(.*?) <br><br>', content))
             items['tag'] = self.reg_match(re.search(r'◎标　　签　(.*?) <br>', content))
             items['classification'] = self.reg_match(re.search(r'◎类　　别　(.*?) <br>', content))
             items['description'] = self.reg_match(re.search(r'◎简　　介 <br><br>　　(.*?) <br><br>', content))
             items['cover_img'] = self.reg_match(re.search(r'src="(https://extraimage.net.*?.jpg)', content))
             items['ftp_url'] = self.reg_match(re.search(r'href="(ftp://ygdy8.*?)">', content))
             items['magnet'] = self.reg_match(re.search(r'a href="(magnet.*?fannounce)"', content))
-        yield items
+
+        # 关键信息缺失则忽略该资源
+        if items['ftp_url'] or items['magnet']:
+            yield items
 
     def reg_match(self, result):
         """
